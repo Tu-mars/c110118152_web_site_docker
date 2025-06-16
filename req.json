@@ -1,0 +1,5 @@
+{
+  "model": "gemma3:1b",
+  "prompt": "請用繁體中文介紹 ChatGPT 是什麼",
+  "stream": false
+}

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}股票查詢（台股 + 美股）{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">📊 股票查詢系統</h1>
+
+<form method="post" class="mb-2">
+    {% csrf_token %}
+    <div class="mb-2">
+        <label for="symbol" class="form-label">股票代碼（可輸入多個，逗號分隔）：</label>
+        <input type="text" name="symbol" id="symbol" class="form-control" placeholder="2330, AAPL, TSLA" required value="{{ request.POST.symbol }}">
+    </div>
+    <button type="submit" class="btn btn-primary">查詢</button>
+</form>
+
+
+{% if index_cards %}
+<div class="card shadow-sm h-100">
+    <div class="card-header bg-dark text-white">
+        <h3 class="mt-1">🌍 全球指標指數</h3>
+    </div>
+    <div class="card-body">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+            {% for idx in index_cards %}
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ idx.name }}</h5>
+                        <p class="card-text fw-bold fs-3">{{ idx.price }}</p>
+                        {% if idx.positive %}
+                            <p class="card-text text-success">{{ idx.change }} ({{ idx.percent }}%)</p>
+                        {% else %}
+                            <p class="card-text text-danger">{{ idx.change }} ({{ idx.percent }}%)</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if stock_charts %}
+<h3 class="mt-5">📈 股票走勢圖</h3>
+<div class="row row-cols-1 row-cols-md-3 g-4 mt-2">
+    {% for stock in stock_charts %}
+    <div class="col">
+        <div class="card shadow-sm h-150">
+            <div class="card-header bg-dark text-white">
+                {{ stock.market }} {{ stock.symbol }} 近期股價走勢
+            </div>
+            <div class="card-body">
+                <h5 class="card-title mb-2">
+                    現價：{{ stock.latest_price }}
+                </h5>
+                {% if stock.positive %}
+                    <p class="text-success">▲ +{{ stock.change }} (+{{ stock.percent }}%)</p>
+                {% else %}
+                    <p class="text-danger">▼ {{ stock.change }} ({{ stock.percent }}%)</p>
+                {% endif %}
+                <canvas id="chart_{{ forloop.counter }}" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    {% for stock in stock_charts %}
+    const ctx{{ forloop.counter }} = document.getElementById('chart_{{ forloop.counter }}').getContext('2d');
+    new Chart(ctx{{ forloop.counter }}, {
+        type: 'line',
+        data: {
+            labels: {{ stock.dates|safe }},
+            datasets: [{
+                label: '{{ stock.symbol }} 收盤價',
+                data: {{ stock.prices|safe }},
+                borderColor: '{% if stock.market == "台股" %}green{% else %}blue{% endif %}',
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: { title: { display: true, text: '日期' }},
+                y: { title: { display: true, text: '價格' }}
+            }
+        }
+    });
+    {% endfor %}
+</script>
+{% elif error %}
+    <div class="alert alert-danger mt-4" role="alert">
+        {{ error|safe }}
+    </div>
+{% endif %}
+{% endblock %}
